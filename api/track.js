@@ -8,40 +8,39 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "AWB required" });
     }
 
-    // ---------- TRY DELHIVERY ----------
-try {
+    let debug = {};
 
-  const delRes = await fetch(
-    `https://track.delhivery.com/api/v1/packages/json/?waybill=${awb}`,
-    {
-      method: "GET",
-      headers: {
-        "Authorization": "Token " + process.env.DEL_TOKEN,
-        "Content-Type": "application/json"
-      }
-    }
-  );
-
-  const delData = await delRes.json();
-
-  console.log("Delhivery Response:", delData);
-
-  if (delData && delData.ShipmentData && delData.ShipmentData.length > 0) {
-    return res.json({
-      courier: "Delhivery",
-      data: delData
-    });
-  }
-
-} catch (e) {
-  console.log("Delhivery error:", e);
-}
-
-
-    // ---------- TRY SHIPROCKET ----------
+    // ---------- DELHIVERY DEBUG ----------
     try {
 
-      // Login
+      const delRes = await fetch(
+        `https://track.delhivery.com/api/v1/packages/json/?waybill=${awb}`,
+        {
+          method: "GET",
+          headers: {
+            "Authorization": "Token " + process.env.DEL_TOKEN,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+
+      const delData = await delRes.json();
+      debug.delhivery = delData;
+
+      if (delData?.ShipmentData?.length > 0) {
+        return res.json({
+          courier: "Delhivery",
+          data: delData
+        });
+      }
+
+    } catch (e) {
+      debug.delhivery_error = e.toString();
+    }
+
+    // ---------- SHIPROCKET DEBUG ----------
+    try {
+
       const loginRes = await fetch(
         "https://apiv2.shiprocket.in/v1/external/auth/login",
         {
@@ -55,9 +54,10 @@ try {
       );
 
       const loginData = await loginRes.json();
+      debug.shiprocket_login = loginData;
+
       const token = loginData.token;
 
-      // Track
       const srTrack = await fetch(
         `https://apiv2.shiprocket.in/v1/external/courier/track/awb/${awb}`,
         {
@@ -68,6 +68,7 @@ try {
       );
 
       const srData = await srTrack.json();
+      debug.shiprocket_track = srData;
 
       if (srData?.tracking_data) {
         return res.json({
@@ -77,16 +78,17 @@ try {
       }
 
     } catch (e) {
-      console.log("Shiprocket error");
+      debug.shiprocket_error = e.toString();
     }
 
     return res.json({
-      status: "Tracking not found"
+      status: "Tracking not found",
+      debug: debug
     });
 
   } catch (err) {
     return res.status(500).json({
-      error: "Server error"
+      error: err.toString()
     });
   }
 
