@@ -9,29 +9,34 @@ export default async function handler(req, res) {
     }
 
     // ---------- TRY DELHIVERY ----------
-    try {
+try {
 
-      const delRes = await fetch(
-        `https://track.delhivery.com/api/v1/packages/json/?waybill=${awb}`,
-        {
-          headers: {
-            "Authorization": `Token ${process.env.DEL_TOKEN}`
-          }
-        }
-      );
-
-      const delData = await delRes.json();
-
-      if (delData?.ShipmentData?.length) {
-        return res.json({
-          courier: "Delhivery",
-          data: delData
-        });
+  const delRes = await fetch(
+    `https://track.delhivery.com/api/v1/packages/json/?waybill=${awb}`,
+    {
+      method: "GET",
+      headers: {
+        "Authorization": "Token " + process.env.DEL_TOKEN,
+        "Content-Type": "application/json"
       }
-
-    } catch (e) {
-      console.log("Delhivery error");
     }
+  );
+
+  const delData = await delRes.json();
+
+  console.log("Delhivery Response:", delData);
+
+  if (delData && delData.ShipmentData && delData.ShipmentData.length > 0) {
+    return res.json({
+      courier: "Delhivery",
+      data: delData
+    });
+  }
+
+} catch (e) {
+  console.log("Delhivery error:", e);
+}
+
 
     // ---------- TRY SHIPROCKET ----------
     try {
